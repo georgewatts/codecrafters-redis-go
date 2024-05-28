@@ -24,15 +24,19 @@ func main() {
 	defer conn.Close()
 
 	for {
-		bytes := []byte{}
-		_, err := conn.Read(bytes)
+		buf := make([]byte, 1024)
+		count, err := conn.Read(buf)
 		if err != nil {
 			fmt.Println("Error reading conn: ", err.Error())
 			os.Exit(1)
 		}
+		fmt.Println("Received: ", buf)
 
-		fmt.Println("Received: ", bytes)
-		response := "+PONG\r\n"
-		conn.Write([]byte(response))
+		if count == 0 {
+			continue
+		}
+
+		response := []byte("+PONG\r\n")
+		conn.Write(response)
 	}
 }
