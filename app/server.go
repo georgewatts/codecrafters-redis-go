@@ -16,6 +16,15 @@ const (
 	OK               = "OK"
 )
 
+const (
+	MASTER = "master"
+	SLAVE  = "slave"
+)
+
+type Replication struct {
+	role string
+}
+
 func NewSimpleString(str string) string {
 	return fmt.Sprintf("+%v\r\n", str)
 }
@@ -35,7 +44,7 @@ func echo(str string) []byte {
 	return []byte(NewBulkString(str))
 }
 
-func parser(str string, store Store) ([]byte, error) {
+func parser(str string, store Store, replication Replication) ([]byte, error) {
 	trimmed := strings.TrimSpace(str)
 	command := strings.Split(trimmed, "\r\n")
 	fmt.Printf("command: %v\n", command)
@@ -52,7 +61,7 @@ func parser(str string, store Store) ([]byte, error) {
 	case "echo":
 		return echo(command[4]), nil
 	case "info":
-		return []byte(NewBulkString("role:master")), nil
+		return []byte(NewBulkString(fmt.Sprintf("role:%s", replication.role))), nil
 	case "get":
 		return []byte(store.Get(command[4])), nil
 	case "set":
@@ -69,7 +78,7 @@ func parser(str string, store Store) ([]byte, error) {
 	return nil, errors.New("command unsupported")
 }
 
-func handleConnection(conn net.Conn, storeService Store) {
+func handleConnection(conn net.Conn, storeService Store, replication Replication) {
 	defer conn.Close()
 
 	fmt.Println("Thread created")
@@ -91,7 +100,7 @@ func handleConnection(conn net.Conn, storeService Store) {
 
 		data := string(buf[:count])
 
-		response, err := parser(data, storeService)
+		response, err := parser(data, storeService, replication)
 		if err != nil {
 			fmt.Println(err)
 			break
@@ -103,7 +112,16 @@ func handleConnection(conn net.Conn, storeService Store) {
 func main() {
 	var port string
 	flag.StringVar(&port, "port", "6379", "Server Port")
+	var replicaOf string
+	flag.StringVar(&replicaOf, "replicaof", "master", "Replica of another instance")
 	flag.Parse()
+
+	replication := Replication{
+		role: MASTER,
+	}
+	if strings.ToLower(replicaOf) != MASTER {
+		replication.role = SLAVE
+	}
 
 	address := fmt.Sprintf("0.0.0.0:%s", port)
 	l, err := net.Listen("tcp", address)
@@ -121,6 +139,6 @@ func main() {
 
 		storeService := NewStringStoreService()
 		fmt.Println("Connection received, starting thread")
-		go handleConnection(conn, storeService)
+		go handleConnection(conn, storeService, replication)
 	}
 }
