@@ -22,7 +22,13 @@ const (
 )
 
 type Replication struct {
-	role string
+	id     string
+	role   string
+	offset int
+}
+
+func (replication Replication) String() string {
+	return fmt.Sprintf("role:%s\r\nmaster_replid:%s\r\nmaster_repl_offset:%d", replication.role, replication.id, replication.offset)
 }
 
 func NewSimpleString(str string) string {
@@ -61,7 +67,7 @@ func parser(str string, store Store, replication Replication) ([]byte, error) {
 	case "echo":
 		return echo(command[4]), nil
 	case "info":
-		return []byte(NewBulkString(fmt.Sprintf("role:%s", replication.role))), nil
+		return []byte(NewBulkString(replication.String())), nil
 	case "get":
 		return []byte(store.Get(command[4])), nil
 	case "set":
@@ -117,7 +123,9 @@ func main() {
 	flag.Parse()
 
 	replication := Replication{
-		role: MASTER,
+		role:   MASTER,
+		id:     "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb",
+		offset: 0,
 	}
 	if strings.ToLower(replicaOf) != MASTER {
 		replication.role = SLAVE
