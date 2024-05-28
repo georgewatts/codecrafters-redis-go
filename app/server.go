@@ -51,6 +51,8 @@ func parser(str string, store Store) ([]byte, error) {
 		return pong(), nil
 	case "echo":
 		return echo(command[4]), nil
+	case "info":
+		return []byte(NewBulkString("role:master")), nil
 	case "get":
 		return []byte(store.Get(command[4])), nil
 	case "set":
