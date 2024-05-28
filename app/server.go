@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -14,11 +15,11 @@ const (
 	OK               = "OK"
 )
 
-func newSimpleString(str string) string {
+func NewSimpleString(str string) string {
 	return fmt.Sprintf("+%v\r\n", str)
 }
 
-func newBulkString(str string) string {
+func NewBulkString(str string) string {
 	if str == "" {
 		return NULL_BULK_STRING
 	}
@@ -30,11 +31,12 @@ func pong() []byte {
 }
 
 func echo(str string) []byte {
-	return []byte(newBulkString(str))
+	return []byte(NewBulkString(str))
 }
 
 func parser(str string, store Store) ([]byte, error) {
-	command := strings.Split(str, "\r\n")
+	trimmed := strings.TrimSpace(str)
+	command := strings.Split(trimmed, "\r\n")
 	fmt.Printf("command: %v\n", command)
 
 	if command[0][0] != '*' {
@@ -51,7 +53,14 @@ func parser(str string, store Store) ([]byte, error) {
 	case "get":
 		return []byte(store.Get(command[4])), nil
 	case "set":
-		return []byte(store.Set(command[4], command[6])), nil
+		if len(command) == 11 {
+			ttl, err := strconv.ParseInt(command[10], 10, 64)
+			if err != nil {
+				return nil, err
+			}
+			return []byte(store.Set(command[4], command[6], ttl)), nil
+		}
+		return []byte(store.Set(command[4], command[6], 0)), nil
 	}
 
 	return nil, errors.New("command unsupported")
@@ -88,45 +97,12 @@ func handleConnection(conn net.Conn, storeService Store) {
 	}
 }
 
-type StringStoreService struct {
-	store map[string]string
-}
-
-type Store interface {
-	Set(string, string) string
-	Get(string) string
-}
-
-func (storeService *StringStoreService) Get(key string) string {
-	val := storeService.store[key]
-
-	if val == "" {
-		return newBulkString("")
-	}
-
-	return newBulkString(val)
-}
-
-func (storeService *StringStoreService) Set(key string, val string) string {
-	storeService.store[key] = val
-
-	return newBulkString(OK)
-}
-
-func newStringStoreService() *StringStoreService {
-	return &StringStoreService{
-		store: map[string]string{},
-	}
-}
-
 func main() {
 	l, err := net.Listen("tcp", "0.0.0.0:6379")
 	if err != nil {
 		fmt.Println("Failed to bind to port 6379")
 		os.Exit(1)
 	}
-
-	storeService := newStringStoreService()
 
 	for {
 		conn, err := l.Accept()
@@ -135,6 +111,7 @@ func main() {
 			os.Exit(1)
 		}
 
+		storeService := NewStringStoreService()
 		fmt.Println("Connection received, starting thread")
 		go handleConnection(conn, storeService)
 	}
