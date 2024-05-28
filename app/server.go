@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"net"
@@ -98,7 +99,12 @@ func handleConnection(conn net.Conn, storeService Store) {
 }
 
 func main() {
-	l, err := net.Listen("tcp", "0.0.0.0:6379")
+	var port string
+	flag.StringVar(&port, "port", "6379", "Server Port")
+	flag.Parse()
+
+	address := fmt.Sprintf("0.0.0.0:%s", port)
+	l, err := net.Listen("tcp", address)
 	if err != nil {
 		fmt.Println("Failed to bind to port 6379")
 		os.Exit(1)

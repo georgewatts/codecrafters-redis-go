@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -39,11 +38,9 @@ func (storeService *StringStoreService) Set(key string, val string, ttl int64) s
 
 	if ttl > 0 {
 		expiry := time.Now().UnixMilli() + ttl
-		fmt.Println("EXPIRY: ", expiry)
 		newEntry.ttl = expiry
 	}
 	storeService.store[key] = newEntry
-	fmt.Printf("newEntry: %v\n", newEntry)
 	return NewBulkString(OK)
 }
 
