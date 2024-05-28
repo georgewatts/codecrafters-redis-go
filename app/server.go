@@ -89,8 +89,6 @@ func handleConnection(conn net.Conn, storeService Store) {
 }
 
 type StringStoreService struct {
-	setBuf chan string
-
 	store map[string]string
 }
 
@@ -117,8 +115,7 @@ func (storeService *StringStoreService) Set(key string, val string) string {
 
 func newStringStoreService() *StringStoreService {
 	return &StringStoreService{
-		setBuf: make(chan string),
-		store:  map[string]string{},
+		store: map[string]string{},
 	}
 }
 
