@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -14,24 +15,22 @@ type StringStoreService struct {
 }
 
 type Store interface {
-	Set(string, string, int64) string
+	Set(string, string, int64)
 	Get(string) string
 }
 
 func (storeService *StringStoreService) Get(key string) string {
 	entry := storeService.store[key]
 
-	if entry.value == "" {
-		return NewBulkString("")
-	} else if entry.ttl > 0 && entry.ttl < time.Now().UnixMilli() {
+	if entry.ttl > 0 && entry.ttl < time.Now().UnixMilli() {
 		delete(storeService.store, key)
-		return NewBulkString("")
+		return ""
 	}
-
-	return NewBulkString(entry.value)
+	fmt.Printf("GET entry: %v\n", entry)
+	return entry.value
 }
 
-func (storeService *StringStoreService) Set(key string, val string, ttl int64) string {
+func (storeService *StringStoreService) Set(key string, val string, ttl int64) {
 	newEntry := storeValue{
 		value: val,
 	}
@@ -40,8 +39,9 @@ func (storeService *StringStoreService) Set(key string, val string, ttl int64) s
 		expiry := time.Now().UnixMilli() + ttl
 		newEntry.ttl = expiry
 	}
+
+	fmt.Printf("SET newEntry: %v\n", newEntry)
 	storeService.store[key] = newEntry
-	return NewBulkString(OK)
 }
 
 func NewStringStoreService() *StringStoreService {
