@@ -10,11 +10,13 @@ import (
 
 // INCOMING COMMANDS
 const (
-	PING = "PING"
-	ECHO = "ECHO"
-	GET  = "GET"
-	SET  = "SET"
-	INFO = "INFO"
+	PING     = "PING"
+	ECHO     = "ECHO"
+	GET      = "GET"
+	SET      = "SET"
+	INFO     = "INFO"
+	REPLCONF = "REPLCONF"
+	PSYNC    = "PSYNC"
 )
 
 // OUTGOING COMMANDS
@@ -77,6 +79,12 @@ func Parse(encodedSequence string) ControlSequence {
 	case SET:
 		controlSequence.command = SET
 		controlSequence.payload = tokens[1:]
+	case REPLCONF:
+		controlSequence.command = REPLCONF
+		controlSequence.payload = tokens[1:]
+	case PSYNC:
+		controlSequence.command = PSYNC
+		controlSequence.payload = tokens[1:]
 	}
 
 	return controlSequence
@@ -105,6 +113,10 @@ func (controlSequence ControlSequence) Execute(store Store, replication Replicat
 		return NewBulkString(OK)
 	case INFO:
 		return NewBulkString(replication.String())
+	case REPLCONF:
+		return NewSimpleString(OK)
+	case PSYNC:
+		return NewSimpleString(OK)
 	}
 
 	// TODO: not sure what to do here
