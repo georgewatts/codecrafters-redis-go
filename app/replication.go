@@ -59,23 +59,33 @@ func RESPArray(elements []string) string {
 	return builder.String()
 }
 
-func (replication Replication) Ping() []byte {
+func Ping() []byte {
 	return []byte(RESPArray([]string{"PING"}))
 }
 
-func (replication Replication) ReplConfPort(port string) []byte {
+func ReplConfPort(port string) []byte {
 	return []byte(RESPArray([]string{"REPLCONF", "listening-port", port}))
 }
 
-func (replication Replication) ReplConfCapa() []byte {
+func ReplConfCapa() []byte {
 	return []byte(RESPArray([]string{"REPLCONF", "capa", "psync2"}))
 }
 
+func ReplConfSync() []byte {
+	return []byte(RESPArray([]string{"PSYNC", "?", "-1"}))
+}
+
 func (replication Replication) Handshake(conn net.Conn, port string) {
-	buf := make([]byte, 1024)
-	conn.Write(replication.Ping())
+	okResp := NewSimpleString("OK")
+	pongResp := NewSimpleString("PONG")
+	buf := make([]byte, len(pongResp))
+	conn.Write(Ping())
 	conn.Read(buf)
-	// buf = nil
-	conn.Write(replication.ReplConfPort(port))
-	conn.Write(replication.ReplConfCapa())
+	conn.Write(ReplConfPort(port))
+	buf = make([]byte, len(okResp))
+	conn.Read(buf)
+	conn.Write(ReplConfCapa())
+	buf = make([]byte, len(okResp))
+	conn.Read(buf)
+	conn.Write(ReplConfSync())
 }
