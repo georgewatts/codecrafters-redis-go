@@ -42,7 +42,7 @@ func NewReplication(id string, address string, offset int) Replication {
 	}
 }
 
-func ArrayString(elements []string) string {
+func RESPArray(elements []string) string {
 	builder := strings.Builder{}
 	builder.WriteByte('*')
 	builder.WriteString(fmt.Sprint(len(elements)))
@@ -59,12 +59,23 @@ func ArrayString(elements []string) string {
 	return builder.String()
 }
 
-func (replication Replication) Ping() {
-	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%s", replication.host, replication.port))
-	if err != nil {
-		fmt.Println("Could not connect to master", err)
-	}
-	defer conn.Close()
+func (replication Replication) Ping() []byte {
+	return []byte(RESPArray([]string{"PING"}))
+}
 
-	conn.Write([]byte(ArrayString([]string{"PING"})))
+func (replication Replication) ReplConfPort(port string) []byte {
+	return []byte(RESPArray([]string{"REPLCONF", "listening-port", port}))
+}
+
+func (replication Replication) ReplConfCapa() []byte {
+	return []byte(RESPArray([]string{"REPLCONF", "capa", "psync2"}))
+}
+
+func (replication Replication) Handshake(conn net.Conn, port string) {
+	buf := make([]byte, 1024)
+	conn.Write(replication.Ping())
+	conn.Read(buf)
+	// buf = nil
+	conn.Write(replication.ReplConfPort(port))
+	conn.Write(replication.ReplConfCapa())
 }
