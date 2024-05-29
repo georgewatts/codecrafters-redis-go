@@ -116,7 +116,7 @@ func (controlSequence ControlSequence) Execute(store Store, replication Replicat
 	case REPLCONF:
 		return NewSimpleString(OK)
 	case PSYNC:
-		return NewSimpleString(fmt.Sprintf("FULLRESYNC %s %d", replication.id, replication.offset))
+		return NewSimpleString(fmt.Sprintf("FULLRESYNC %s %d", replication.id, replication.offset)) + ResponseSequence(ReplFullResync())
 	}
 
 	// TODO: not sure what to do here

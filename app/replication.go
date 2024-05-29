@@ -1,10 +1,16 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"net"
 	"strings"
+
+	_ "embed"
 )
+
+//go:embed blank.rdb
+var rdbHex string
 
 const (
 	MASTER = "master"
@@ -73,6 +79,15 @@ func ReplConfCapa() []byte {
 
 func ReplConfSync() []byte {
 	return []byte(RESPArray([]string{"PSYNC", "?", "-1"}))
+}
+
+func ReplFullResync() []byte {
+	decoded, err := hex.DecodeString(rdbHex)
+	if err != nil {
+		fmt.Println("Could not decode rdb", err)
+	}
+
+	return append([]byte(fmt.Sprintf("$%d\r\n", len(decoded))), decoded...)
 }
 
 func (replication Replication) Handshake(conn net.Conn, port string) {
