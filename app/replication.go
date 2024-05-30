@@ -23,10 +23,22 @@ type Replication struct {
 	host   string
 	port   string
 	offset int
+
+	replicants []net.Conn
 }
 
 func (replication Replication) String() string {
 	return fmt.Sprintf("role:%s\r\nmaster_replid:%s\r\nmaster_repl_offset:%d", replication.role, replication.id, replication.offset)
+}
+
+func (replication *Replication) RegisterReplicant(replicant net.Conn) {
+	replication.replicants = append(replication.replicants, replicant)
+}
+
+func (replication *Replication) Propagate(data []string) {
+	for i := 0; i < len(replication.replicants); i++ {
+		replication.replicants[i].Write([]byte(NewRESPArray(data)))
+	}
 }
 
 func NewReplication(id string, address string, offset int) Replication {
@@ -48,37 +60,20 @@ func NewReplication(id string, address string, offset int) Replication {
 	}
 }
 
-func RESPArray(elements []string) string {
-	builder := strings.Builder{}
-	builder.WriteByte('*')
-	builder.WriteString(fmt.Sprint(len(elements)))
-	builder.WriteString("\r\n")
-
-	for _, v := range elements {
-		builder.WriteByte('$')
-		builder.WriteString(fmt.Sprint(len(v)))
-		builder.WriteString("\r\n")
-		builder.WriteString(v)
-		builder.WriteString("\r\n")
-	}
-
-	return builder.String()
-}
-
 func Ping() []byte {
-	return []byte(RESPArray([]string{"PING"}))
+	return []byte(NewRESPArray([]string{"PING"}))
 }
 
 func ReplConfPort(port string) []byte {
-	return []byte(RESPArray([]string{"REPLCONF", "listening-port", port}))
+	return []byte(NewRESPArray([]string{"REPLCONF", "listening-port", port}))
 }
 
 func ReplConfCapa() []byte {
-	return []byte(RESPArray([]string{"REPLCONF", "capa", "psync2"}))
+	return []byte(NewRESPArray([]string{"REPLCONF", "capa", "psync2"}))
 }
 
 func ReplConfSync() []byte {
-	return []byte(RESPArray([]string{"PSYNC", "?", "-1"}))
+	return []byte(NewRESPArray([]string{"PSYNC", "?", "-1"}))
 }
 
 func ReplFullResync() []byte {
@@ -103,4 +98,7 @@ func (replication Replication) Handshake(conn net.Conn, port string) {
 	buf = make([]byte, len(okResp))
 	conn.Read(buf)
 	conn.Write(ReplConfSync())
+}
+
+func RespClient() {
 }
